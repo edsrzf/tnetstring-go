@@ -126,8 +126,7 @@ func unmarshalArray(data []byte, v reflect.Value) os.Error {
 }
 
 func unmarshalMap(data []byte, v reflect.Value) os.Error {
-	ktype := v.Type().Key()
-	if ktype.Kind() != reflect.String {
+	if v.Type().Key().Kind() != reflect.String {
 		return os.NewError("tnetstring: only maps with string keys can be unmarshaled")
 	}
 	if v.IsNil() {
@@ -135,15 +134,17 @@ func unmarshalMap(data []byte, v reflect.Value) os.Error {
 	}
 	n := 0
 	vtype := v.Type().Elem()
-	key := reflect.New(ktype).Elem()
+	var s string
+	key := reflect.ValueOf(&s).Elem()
 	val := reflect.New(vtype).Elem()
 	for len(data)-n > 0 {
-		nn, err := unmarshal(data[n:], key)
-		if err != nil {
-			return err
+		typ, content, nn := readElement(data[n:])
+		if typ != ',' {
+			return os.NewError("tnetstring: non-string key in dictionary")
 		}
+		s = string(content)
 		n += nn
-		nn, err = unmarshal(data[n:], val)
+		nn, err := unmarshal(data[n:], val)
 		if err != nil {
 			return err
 		}

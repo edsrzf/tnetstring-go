@@ -14,7 +14,7 @@ type tnetstringTest struct {
 
 // Stable tests used for benchmarking. These match up with the reference
 // implementation's benchmark cases.
-var stableTests = []tnetstringTest {
+var stableTests = []tnetstringTest{
 	{map[string]string{}, "0:}"},
 	{[]bool{}, "0:]"},
 	{"", "0:,"},
@@ -28,7 +28,7 @@ var stableTests = []tnetstringTest {
 	{[]interface{}{int64(12345), int64(67890), "xxxxx"}, "24:5:12345#5:67890#5:xxxxx,]"},
 }
 
-var tnetstringTests = []tnetstringTest {
+var tnetstringTests = []tnetstringTest{
 	{14, "2:14#"},
 	{uint(14), "2:14#"},
 	{"hello", "5:hello,"},
@@ -40,11 +40,11 @@ var tnetstringTests = []tnetstringTest {
 	{struct {
 		A int
 		B string
-	}{1, "hello"}, "20:1:A,1:1#1:B,5:hello,}"},
+	}{1, "hello"},"20:1:A,1:1#1:B,5:hello,}"},
 	{&struct {
 		A int
 		B string
-	}{1, "hello"}, "20:1:A,1:1#1:B,5:hello,}"},
+	}{1, "hello"},"20:1:A,1:1#1:B,5:hello,}"},
 }
 
 var tests = append(stableTests, tnetstringTests...)
@@ -137,5 +137,3 @@ func BenchmarkJsonUnmarshal(b *testing.B) {
 		}
 	}
 }
-
-

@@ -56,24 +56,25 @@ func marshal(b *outbuf, v reflect.Value) os.Error {
 	}
 	b.writeByte(typ)
 	orig := len(b.buf) - b.n
-	switch kind {
-	case reflect.Invalid:
-	case reflect.Bool:
+	switch typ {
+	case '~':
+	case '!':
 		str := "false"
 		if v.Bool() {
 			str = "true"
 		}
 		b.writeString(str)
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		str := strconv.Itoa64(v.Int())
-		b.writeString(str)
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32,
-		reflect.Uint64, reflect.Uintptr:
-		str := strconv.Uitoa64(v.Uint())
-		b.writeString(str)
-	case reflect.String:
+	case '#':
+		if reflect.Int <= kind && kind <= reflect.Int64 {
+			str := strconv.Itoa64(v.Int())
+			b.writeString(str)
+		} else {
+			str := strconv.Uitoa64(v.Uint())
+			b.writeString(str)
+		}
+	case ',':
 		b.writeString(v.String())
-	case reflect.Array, reflect.Slice:
+	case ']':
 		l := v.Len()
 		for i := l - 1; i >= 0; i-- {
 			err := marshal(b, v.Index(i))
@@ -81,36 +82,38 @@ func marshal(b *outbuf, v reflect.Value) os.Error {
 				return err
 			}
 		}
-	case reflect.Map:
-		if v.Type().Key().Kind() != reflect.String {
-			return os.NewError("tnetstring: only maps with string keys can be marshaled")
-		}
-		keys := v.MapKeys()
-		for _, key := range keys {
-			if err := marshal(b, v.MapIndex(key)); err != nil {
-				return err
+	case '}':
+		if kind == reflect.Map {
+			if v.Type().Key().Kind() != reflect.String {
+				return os.NewError("tnetstring: only maps with string keys can be marshaled")
 			}
-			b.writeByte(',')
-			orig := len(b.buf) - b.n
-			b.writeString(key.String())
-			b.writeLen(orig)
-		}
-	case reflect.Struct:
-		t := v.Type()
-		l := t.NumField()
-		for i := l - 1; i >= 0; i-- {
-			field := t.Field(i)
-			str := field.Tag
-			if str == "" {
-				str = field.Name
+			keys := v.MapKeys()
+			for _, key := range keys {
+				if err := marshal(b, v.MapIndex(key)); err != nil {
+					return err
+				}
+				b.writeByte(',')
+				orig := len(b.buf) - b.n
+				b.writeString(key.String())
+				b.writeLen(orig)
 			}
-			if err := marshal(b, v.Field(i)); err != nil {
-				return err
+		} else {
+			t := v.Type()
+			l := t.NumField()
+			for i := l - 1; i >= 0; i-- {
+				field := t.Field(i)
+				str := field.Tag
+				if str == "" {
+					str = field.Name
+				}
+				if err := marshal(b, v.Field(i)); err != nil {
+					return err
+				}
+				b.writeByte(',')
+				orig := len(b.buf) - b.n
+				b.writeString(str)
+				b.writeLen(orig)
 			}
-			b.writeByte(',')
-			orig := len(b.buf) - b.n
-			b.writeString(str)
-			b.writeLen(orig)
 		}
 	default:
 		panic("unreachable")

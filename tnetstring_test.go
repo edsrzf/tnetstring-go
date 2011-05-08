@@ -94,6 +94,14 @@ func init() {
 	}
 }
 
+func BenchmarkMarshal(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		for _, test := range stableTests {
+			Marshal(test.val)
+		}
+	}
+}
+
 func BenchmarkUnmarshal(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for i, test := range benchmarkData {
@@ -107,7 +115,16 @@ func BenchmarkUnmarshal(b *testing.B) {
 	}
 }
 
-// JSON benchmark for comparison
+// JSON benchmarks for comparison
+
+func BenchmarkJsonMarshal(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		for _, test := range stableTests {
+			json.Marshal(test.val)
+		}
+	}
+}
+
 func BenchmarkJsonUnmarshal(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for i, test := range jsonData {
@@ -120,3 +137,5 @@ func BenchmarkJsonUnmarshal(b *testing.B) {
 		}
 	}
 }
+
+

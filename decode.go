@@ -44,7 +44,8 @@ func unmarshal(data []byte, v reflect.Value) (int, os.Error) {
 	}
 	v = indirect(v, true)
 	kind := v.Kind()
-	if kind != reflect.Interface && typeLookup[kind] != typ {
+	// ~ and interface types are special cases
+	if typ != '~' && kind != reflect.Interface && typeLookup[kind] != typ {
 		return 0, os.NewError("tnetstring: invalid value to unmarshal into")
 	}
 	switch typ {
@@ -85,6 +86,13 @@ func unmarshal(data []byte, v reflect.Value) (int, os.Error) {
 		}
 		if err != nil {
 			return 0, err
+		}
+	case '~':
+		switch kind {
+		case reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+			v.Set(reflect.Zero(v.Type()))
+		default:
+			return 0, os.NewError("tnetstring: invalid value to unmarshal into")
 		}
 	default:
 		return 0, os.NewError("tnetstring: unknown type")

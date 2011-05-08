@@ -105,13 +105,13 @@ func unmarshalArray(data []byte, v reflect.Value) os.Error {
 	n := 0
 	i := 0
 	elType := v.Type().Elem()
+	elVal := reflect.Zero(elType)
 	for len(data)-n > 0 {
 		if i >= v.Len() {
 			if kind == reflect.Array {
 				break
 			} else {
-				// TODO: could cut down on allocations by calling MakeSlice instead
-				v.Set(reflect.Append(v, reflect.New(elType).Elem()))
+				v.Set(reflect.Append(v, elVal))
 			}
 		}
 		el := v.Index(i)

@@ -157,29 +157,31 @@ func unmarshalMap(data []byte, v reflect.Value) os.Error {
 func unmarshalStruct(data []byte, v reflect.Value) os.Error {
 	n := 0
 	structType := v.Type()
-	var s string
-	name := reflect.ValueOf(&s).Elem()
+	var name string
 	for len(data)-n > 0 {
-		nn, err := unmarshal(data[n:], name)
-		if err != nil {
-			return err
+		typ, content, nn := readElement(data[n:])
+		if typ != ',' {
+			return os.NewError("tnetstring: non-string key in dictionary")
 		}
+		name = string(content)
 		n += nn
-		field := v.FieldByName(s)
+		field := v.FieldByName(name)
 		if field.Internal == nil {
 			for i := 0; i < structType.NumField(); i++ {
 				f := structType.Field(i)
-				if f.Tag == s {
+				if f.Tag == name {
 					field = v.Field(i)
 					break
 				}
 			}
 			if field.Internal == nil {
-				var i interface{}
-				field = reflect.ValueOf(&i).Elem()
+				// skip the field
+				_, _, nn := readElement(data[n:])
+				n += nn
+				continue
 			}
 		}
-		nn, err = unmarshal(data[n:], field)
+		nn, err := unmarshal(data[n:], field)
 		if err != nil {
 			return err
 		}

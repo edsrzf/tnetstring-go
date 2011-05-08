@@ -51,13 +51,13 @@ var tests = append(stableTests, tnetstringTests...)
 
 func TestMarshal(t *testing.T) {
 	for i, test := range tests {
-		b, err := Marshal(test.val)
+		out, err := Marshal(test.val)
 		if err != nil {
 			t.Errorf("#%d Marshal error: %s", i, err)
 			continue
 		}
-		if string(b) != test.data {
-			t.Errorf("#%d want\n%q\ngot\n%q", i, test.data, b)
+		if out != test.data {
+			t.Errorf("#%d want\n%q\ngot\n%q", i, test.data, out)
 		}
 	}
 }
@@ -69,7 +69,7 @@ func TestUnmarshal(t *testing.T) {
 			continue
 		}
 		val := reflect.New(ty)
-		err := Unmarshal([]byte(test.data), val.Interface())
+		err := Unmarshal(test.data, val.Interface())
 		if err != nil {
 			t.Errorf("#%d Unmarshal error: %s", i, err)
 		}
@@ -80,17 +80,17 @@ func TestUnmarshal(t *testing.T) {
 }
 
 var jsonData [][]byte
-var benchmarkData [][]byte
+var benchmarkData []string
 
 func init() {
 	jsonData = make([][]byte, len(stableTests))
-	benchmarkData = make([][]byte, len(stableTests))
+	benchmarkData = make([]string, len(stableTests))
 	for i, test := range stableTests {
 		var err os.Error
 		if jsonData[i], err = json.Marshal(test.val); err != nil {
 			panic(err.String())
 		}
-		benchmarkData[i] = []byte(test.data)
+		benchmarkData[i] = test.data
 	}
 }
 

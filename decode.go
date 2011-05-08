@@ -1,13 +1,13 @@
 package tnetstring
 
 import (
-	"bytes"
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
-func Unmarshal(data []byte, v interface{}) os.Error {
+func Unmarshal(data string, v interface{}) os.Error {
 	val := reflect.ValueOf(v)
 	val = reflect.Indirect(val)
 	if !val.CanSet() {
@@ -37,7 +37,7 @@ func indirect(v reflect.Value, create bool) reflect.Value {
 	panic("unreachable")
 }
 
-func unmarshal(data []byte, v reflect.Value) (int, os.Error) {
+func unmarshal(data string, v reflect.Value) (int, os.Error) {
 	typ, content, n := readElement(data)
 	if n == 0 {
 		return 0, os.NewError("tnetstring: invalid data")
@@ -50,31 +50,31 @@ func unmarshal(data []byte, v reflect.Value) (int, os.Error) {
 	}
 	switch typ {
 	case '!':
-		v.Set(reflect.ValueOf(string(content) == "true"))
+		v.Set(reflect.ValueOf(content == "true"))
 	case '#':
 		switch kind {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			i, err := strconv.Atoi64(string(content))
+			i, err := strconv.Atoi64(content)
 			if err != nil {
 				return 0, err
 			}
 			v.SetInt(i)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32,
 			reflect.Uint64, reflect.Uintptr:
-			ui, err := strconv.Atoui64(string(content))
+			ui, err := strconv.Atoui64(content)
 			if err != nil {
 				return 0, err
 			}
 			v.SetUint(ui)
 		case reflect.Interface:
-			i, err := strconv.Atoi64(string(content))
+			i, err := strconv.Atoi64(content)
 			if err != nil {
 				return 0, err
 			}
 			v.Set(reflect.ValueOf(i))
 		}
 	case ',':
-		v.Set(reflect.ValueOf(string(content)))
+		v.Set(reflect.ValueOf(content))
 	case ']':
 		unmarshalArray(content, v)
 	case '}':
@@ -100,7 +100,7 @@ func unmarshal(data []byte, v reflect.Value) (int, os.Error) {
 	return n, nil
 }
 
-func unmarshalArray(data []byte, v reflect.Value) os.Error {
+func unmarshalArray(data string, v reflect.Value) os.Error {
 	kind := v.Kind()
 	n := 0
 	i := 0
@@ -125,7 +125,7 @@ func unmarshalArray(data []byte, v reflect.Value) os.Error {
 	return nil
 }
 
-func unmarshalMap(data []byte, v reflect.Value) os.Error {
+func unmarshalMap(data string, v reflect.Value) os.Error {
 	if v.Type().Key().Kind() != reflect.String {
 		return os.NewError("tnetstring: only maps with string keys can be unmarshaled")
 	}
@@ -142,7 +142,7 @@ func unmarshalMap(data []byte, v reflect.Value) os.Error {
 		if typ != ',' {
 			return os.NewError("tnetstring: non-string key in dictionary")
 		}
-		s = string(content)
+		s = content
 		n += nn
 		nn, err := unmarshal(data[n:], val)
 		if err != nil {
@@ -154,7 +154,7 @@ func unmarshalMap(data []byte, v reflect.Value) os.Error {
 	return nil
 }
 
-func unmarshalStruct(data []byte, v reflect.Value) os.Error {
+func unmarshalStruct(data string, v reflect.Value) os.Error {
 	n := 0
 	structType := v.Type()
 	var name string
@@ -163,7 +163,7 @@ func unmarshalStruct(data []byte, v reflect.Value) os.Error {
 		if typ != ',' {
 			return os.NewError("tnetstring: non-string key in dictionary")
 		}
-		name = string(content)
+		name = content
 		n += nn
 		field := v.FieldByName(name)
 		if field.Internal == nil {
@@ -190,12 +190,12 @@ func unmarshalStruct(data []byte, v reflect.Value) os.Error {
 	return nil
 }
 
-func readElement(data []byte) (typ byte, content []byte, n int) {
-	col := bytes.IndexByte(data, ':')
+func readElement(data string) (typ byte, content string, n int) {
+	col := strings.Index(data, ":")
 	if col < 1 {
 		return
 	}
-	n, err := strconv.Atoi(string(data[:col]))
+	n, err := strconv.Atoi(data[:col])
 	if err != nil || n > len(data[col+1:]) {
 		return
 	}

@@ -13,15 +13,15 @@ type outbuf struct {
 	n int
 }
 
-func Marshal(v interface{}) ([]byte, os.Error) {
+func Marshal(v interface{}) (string, os.Error) {
 	val := reflect.ValueOf(v)
 	b := new(outbuf)
 	b.n = 2
 	b.buf = make([]byte, b.n)
 	if err := marshal(b, val); err != nil {
-		return nil, err
+		return "", err
 	}
-	return b.buf[b.n:], nil
+	return string(b.buf[b.n:]), nil
 }
 
 var typeLookup = [...]byte{

@@ -55,7 +55,7 @@ func marshal(b *outbuf, v reflect.Value) os.Error {
 		return os.NewError("tnetstring: unsupported type")
 	}
 	b.writeByte(typ)
-	orig := len(b.buf[b.n:])
+	orig := len(b.buf) - b.n
 	switch kind {
 	case reflect.Invalid:
 	case reflect.Bool:
@@ -90,9 +90,10 @@ func marshal(b *outbuf, v reflect.Value) os.Error {
 			if err := marshal(b, v.MapIndex(key)); err != nil {
 				return err
 			}
-			if err := marshal(b, key); err != nil {
-				return err
-			}
+			b.writeByte(',')
+			orig := len(b.buf) - b.n
+			b.writeString(key.String())
+			b.writeLen(orig)
 		}
 	case reflect.Struct:
 		t := v.Type()
@@ -106,9 +107,10 @@ func marshal(b *outbuf, v reflect.Value) os.Error {
 			if err := marshal(b, v.Field(i)); err != nil {
 				return err
 			}
-			if err := marshal(b, reflect.ValueOf(str)); err != nil {
-				return err
-			}
+			b.writeByte(',')
+			orig := len(b.buf) - b.n
+			b.writeString(str)
+			b.writeLen(orig)
 		}
 	default:
 		panic("unreachable")
@@ -134,7 +136,7 @@ func (b *outbuf) writeString(s string) {
 }
 
 func (b *outbuf) writeLen(orig int) {
-	l := len(b.buf[b.n:]) - orig
+	l := len(b.buf) - b.n - orig
 	str := strconv.Itoa(l)
 	b.writeByte(':')
 	b.writeString(str)

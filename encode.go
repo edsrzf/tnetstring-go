@@ -16,7 +16,7 @@ type outbuf struct {
 func Marshal(v interface{}) (string, os.Error) {
 	val := reflect.ValueOf(v)
 	b := new(outbuf)
-	b.n = 2
+	b.n = 20
 	b.buf = make([]byte, b.n)
 	if err := marshal(b, val); err != nil {
 		return "", err

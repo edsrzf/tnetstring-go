@@ -48,7 +48,7 @@ var typeLookup = [...]byte{
 }
 
 func marshal(b *outbuf, v reflect.Value) os.Error {
-	v = reflect.Indirect(v)
+	v = indirect(v, false)
 	kind := v.Kind()
 	typ := typeLookup[kind]
 	if typ == 0 {

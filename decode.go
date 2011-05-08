@@ -17,15 +17,18 @@ func Unmarshal(data []byte, v interface{}) os.Error {
 	return err
 }
 
-func indirect(v reflect.Value) reflect.Value {
+func indirect(v reflect.Value, create bool) reflect.Value {
 	for {
 		switch v.Kind() {
 		case reflect.Ptr:
-			if v.IsNil() {
+			if create && v.IsNil() {
 				v.Set(reflect.New(v.Type().Elem()))
 			}
-			fallthrough
+			v = v.Elem()
 		case reflect.Interface:
+			if create && v.IsNil() {
+				return v
+			}
 			v = v.Elem()
 		default:
 			return v
@@ -39,14 +42,14 @@ func unmarshal(data []byte, v reflect.Value) (int, os.Error) {
 	if n == 0 {
 		return 0, os.NewError("tnetstring: invalid data")
 	}
-	v = indirect(v)
+	v = indirect(v, true)
 	kind := v.Kind()
-	if typeLookup[kind] != typ {
+	if kind != reflect.Interface && typeLookup[kind] != typ {
 		return 0, os.NewError("tnetstring: invalid value to unmarshal into")
 	}
 	switch typ {
 	case '!':
-		v.SetBool(string(content) == "true")
+		v.Set(reflect.ValueOf(string(content) == "true"))
 	case '#':
 		switch kind {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -62,9 +65,15 @@ func unmarshal(data []byte, v reflect.Value) (int, os.Error) {
 				return 0, err
 			}
 			v.SetUint(ui)
+		case reflect.Interface:
+			i, err := strconv.Atoi64(string(content))
+			if err != nil {
+				return 0, err
+			}
+			v.Set(reflect.ValueOf(i))
 		}
 	case ',':
-		v.SetString(string(content))
+		v.Set(reflect.ValueOf(string(content)))
 	case ']':
 		unmarshalArray(content, v)
 	case '}':

@@ -37,6 +37,29 @@ func indirect(v reflect.Value, create bool) reflect.Value {
 	panic("unreachable")
 }
 
+var typeLookup = [...]byte{
+	reflect.Invalid: '~',
+	reflect.Bool:    '!',
+	reflect.Int:     '#',
+	reflect.Int8:    '#',
+	reflect.Int16:   '#',
+	reflect.Int32:   '#',
+	reflect.Int64:   '#',
+	reflect.Uint:    '#',
+	reflect.Uint8:   '#',
+	reflect.Uint16:  '#',
+	reflect.Uint32:  '#',
+	reflect.Uint64:  '#',
+	reflect.Uintptr: '#',
+	reflect.String:  ',',
+	reflect.Array:   ']',
+	reflect.Slice:   ']',
+	reflect.Map:     '}',
+	reflect.Struct:  '}',
+	// include last item so the array has the right length
+	reflect.UnsafePointer: 0,
+}
+
 func unmarshal(data string, v reflect.Value) (int, os.Error) {
 	typ, content, n := readElement(data)
 	if n == 0 {

@@ -6,94 +6,139 @@ import (
 	"strconv"
 )
 
+func Marshal(v interface{}) (s string, err os.Error) {
+	defer func() {
+		if s, ok := recover().(string); ok {
+			err = os.NewError(s)
+		}
+	}()
+	val := reflect.ValueOf(v)
+	b := new(outbuf)
+	b.n = 20
+	b.buf = make([]byte, b.n)
+	lookupEncode(val.Kind())(b, val)
+	return string(b.buf[b.n:]), nil
+}
+
+var encodeTable []func(*outbuf, reflect.Value)
+
+func init() {
+	encodeTable = []func(*outbuf, reflect.Value){
+		reflect.Invalid:   encodeNull,
+		reflect.Bool:      encodeBool,
+		reflect.Int:       encodeInt,
+		reflect.Int8:      encodeInt,
+		reflect.Int16:     encodeInt,
+		reflect.Int32:     encodeInt,
+		reflect.Int64:     encodeInt,
+		reflect.Uint:      encodeUint,
+		reflect.Uint8:     encodeUint,
+		reflect.Uint16:    encodeUint,
+		reflect.Uint32:    encodeUint,
+		reflect.Uint64:    encodeUint,
+		reflect.Uintptr:   encodeUint,
+		reflect.String:    encodeString,
+		reflect.Array:     encodeArray,
+		reflect.Slice:     encodeArray,
+		reflect.Map:       encodeMap,
+		reflect.Struct:    encodeStruct,
+		reflect.Ptr:       encodeIndirect,
+		reflect.Interface: encodeIndirect,
+		// include last item so the array has the right length
+		reflect.UnsafePointer: nil,
+	}
+}
+
+func encodeNull(b *outbuf, v reflect.Value) {
+	b.writeTString('~', "")
+}
+
+func encodeBool(b *outbuf, v reflect.Value) {
+	str := "false"
+	if v.Bool() {
+		str = "true"
+	}
+	b.writeTString('!', str)
+}
+
+func encodeInt(b *outbuf, v reflect.Value) {
+	b.writeTString('#', strconv.Itoa64(v.Int()))
+}
+
+func encodeUint(b *outbuf, v reflect.Value) {
+	b.writeTString('#', strconv.Uitoa64(v.Uint()))
+}
+
+func encodeString(b *outbuf, v reflect.Value) {
+	b.writeTString(',', v.String())
+}
+
+func encodeArray(b *outbuf, v reflect.Value) {
+	b.writeByte(']')
+	orig := len(b.buf) - b.n
+	encodeFunc := lookupEncode(v.Type().Elem().Kind())
+	for i := v.Len() - 1; i >= 0; i-- {
+		encodeFunc(b, v.Index(i))
+	}
+	b.writeLen(orig)
+}
+
+func encodeMap(b *outbuf, v reflect.Value) {
+	b.writeByte('}')
+	orig := len(b.buf) - b.n
+	if v.Type().Key().Kind() != reflect.String {
+		panic("tnetstring: only maps with string keys can be encoded")
+	}
+	encodeFunc := lookupEncode(v.Type().Elem().Kind())
+	for _, key := range v.MapKeys() {
+		encodeFunc(b, v.MapIndex(key))
+		b.writeTString(',', key.String())
+	}
+	b.writeLen(orig)
+}
+
+func encodeStruct(b *outbuf, v reflect.Value) {
+	b.writeByte('}')
+	orig := len(b.buf) - b.n
+	t := v.Type()
+	l := t.NumField()
+	for i := l - 1; i >= 0; i-- {
+		field := t.Field(i)
+		str := field.Tag
+		if str == "" {
+			str = field.Name
+		}
+		lookupEncode(field.Type.Kind())(b, v.Field(i))
+		b.writeTString(',', str)
+	}
+	b.writeLen(orig)
+}
+
+func encodeIndirect(b *outbuf, v reflect.Value) {
+	for {
+		switch v.Kind() {
+		case reflect.Ptr, reflect.Interface:
+			v = v.Elem()
+		default:
+			encodeFunc := encodeTable[v.Kind()]
+			encodeFunc(b, v)
+			return
+		}
+	}
+}
+
+func lookupEncode(k reflect.Kind) func(*outbuf, reflect.Value) {
+	if f := encodeTable[k]; f != nil {
+		return f
+	}
+	panic("tnetstring: unsupported type")
+}
+
 type outbuf struct {
 	buf []byte
 	// n is the index we last wrote to or the amount of space left,
 	// depending on how you look at it
 	n int
-}
-
-func Marshal(v interface{}) (string, os.Error) {
-	val := reflect.ValueOf(v)
-	b := new(outbuf)
-	b.n = 20
-	b.buf = make([]byte, b.n)
-	if err := marshal(b, val); err != nil {
-		return "", err
-	}
-	return string(b.buf[b.n:]), nil
-}
-
-func marshal(b *outbuf, v reflect.Value) os.Error {
-	v = indirect(v, false)
-	var typ byte
-	var str string
-	switch v.Kind() {
-	case reflect.Invalid:
-		typ = '~'
-	case reflect.Bool:
-		typ = '!'
-		if v.Bool() {
-			str = "true"
-		} else {
-			str = "false"
-		}
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		typ = '#'
-		str = strconv.Itoa64(v.Int())
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		typ = '#'
-		str = strconv.Uitoa64(v.Uint())
-	case reflect.String:
-		typ = ','
-		str = v.String()
-	case reflect.Array, reflect.Slice:
-		b.writeByte(']')
-		orig := len(b.buf) - b.n
-		for i := v.Len() - 1; i >= 0; i-- {
-			if err := marshal(b, v.Index(i)); err != nil {
-				return err
-			}
-		}
-		b.writeLen(orig)
-		return nil
-	case reflect.Map:
-		b.writeByte('}')
-		orig := len(b.buf) - b.n
-		if v.Type().Key().Kind() != reflect.String {
-			return os.NewError("tnetstring: only maps with string keys can be marshaled")
-		}
-		for _, key := range v.MapKeys() {
-			if err := marshal(b, v.MapIndex(key)); err != nil {
-				return err
-			}
-			b.writeTString(',', key.String())
-		}
-		b.writeLen(orig)
-		return nil
-	case reflect.Struct:
-		b.writeByte('}')
-		orig := len(b.buf) - b.n
-		t := v.Type()
-		l := t.NumField()
-		for i := l - 1; i >= 0; i-- {
-			field := t.Field(i)
-			str := field.Tag
-			if str == "" {
-				str = field.Name
-			}
-			if err := marshal(b, v.Field(i)); err != nil {
-				return err
-			}
-			b.writeTString(',', str)
-		}
-		b.writeLen(orig)
-		return nil
-	default:
-		return os.NewError("tnetstring: unsupported type")
-	}
-	b.writeTString(typ, str)
-	return nil
 }
 
 func (buf *outbuf) writeByte(b byte) {

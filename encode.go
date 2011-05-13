@@ -65,20 +65,19 @@ func marshal(b *outbuf, v reflect.Value) os.Error {
 		}
 		b.writeString(str)
 	case '#':
+		var str string
 		if reflect.Int <= kind && kind <= reflect.Int64 {
-			str := strconv.Itoa64(v.Int())
-			b.writeString(str)
+			str = strconv.Itoa64(v.Int())
 		} else {
-			str := strconv.Uitoa64(v.Uint())
-			b.writeString(str)
+			str = strconv.Uitoa64(v.Uint())
 		}
+		b.writeString(str)
 	case ',':
 		b.writeString(v.String())
 	case ']':
 		l := v.Len()
 		for i := l - 1; i >= 0; i-- {
-			err := marshal(b, v.Index(i))
-			if err != nil {
+			if err := marshal(b, v.Index(i)); err != nil {
 				return err
 			}
 		}
@@ -87,8 +86,7 @@ func marshal(b *outbuf, v reflect.Value) os.Error {
 			if v.Type().Key().Kind() != reflect.String {
 				return os.NewError("tnetstring: only maps with string keys can be marshaled")
 			}
-			keys := v.MapKeys()
-			for _, key := range keys {
+			for _, key := range v.MapKeys() {
 				if err := marshal(b, v.MapIndex(key)); err != nil {
 					return err
 				}

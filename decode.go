@@ -102,11 +102,10 @@ func unmarshal(data string, v reflect.Value) (int, os.Error) {
 
 func unmarshalArray(data string, v reflect.Value) os.Error {
 	kind := v.Kind()
-	n := 0
 	i := 0
 	elType := v.Type().Elem()
 	elVal := reflect.Zero(elType)
-	for len(data)-n > 0 {
+	for len(data) > 0 {
 		if i >= v.Len() {
 			if kind == reflect.Array {
 				break
@@ -116,11 +115,11 @@ func unmarshalArray(data string, v reflect.Value) os.Error {
 		}
 		el := v.Index(i)
 		i++
-		nn, err := unmarshal(data[n:], el)
+		n, err := unmarshal(data, el)
+		data = data[n:]
 		if err != nil {
 			return err
 		}
-		n += nn
 	}
 	return nil
 }
@@ -132,39 +131,37 @@ func unmarshalMap(data string, v reflect.Value) os.Error {
 	if v.IsNil() {
 		v.Set(reflect.MakeMap(v.Type()))
 	}
-	n := 0
 	vtype := v.Type().Elem()
 	var s string
 	key := reflect.ValueOf(&s).Elem()
 	val := reflect.New(vtype).Elem()
-	for len(data)-n > 0 {
-		typ, content, nn := readElement(data[n:])
+	for len(data) > 0 {
+		typ, content, n := readElement(data)
+		data = data[n:]
 		if typ != ',' {
 			return os.NewError("tnetstring: non-string key in dictionary")
 		}
 		s = content
-		n += nn
-		nn, err := unmarshal(data[n:], val)
+		n, err := unmarshal(data, val)
+		data = data[n:]
 		if err != nil {
 			return err
 		}
-		n += nn
 		v.SetMapIndex(key, val)
 	}
 	return nil
 }
 
 func unmarshalStruct(data string, v reflect.Value) os.Error {
-	n := 0
 	structType := v.Type()
 	var name string
-	for len(data)-n > 0 {
-		typ, content, nn := readElement(data[n:])
+	for len(data) > 0 {
+		typ, content, n := readElement(data)
+		data = data[n:]
 		if typ != ',' {
 			return os.NewError("tnetstring: non-string key in dictionary")
 		}
 		name = content
-		n += nn
 		field := v.FieldByName(name)
 		if field.Internal == nil {
 			for i := 0; i < structType.NumField(); i++ {
@@ -176,16 +173,16 @@ func unmarshalStruct(data string, v reflect.Value) os.Error {
 			}
 			if field.Internal == nil {
 				// skip the field
-				_, _, nn := readElement(data[n:])
-				n += nn
+				_, _, n := readElement(data)
+				data = data[n:]
 				continue
 			}
 		}
-		nn, err := unmarshal(data[n:], field)
+		n, err := unmarshal(data, field)
+		data = data[n:]
 		if err != nil {
 			return err
 		}
-		n += nn
 	}
 	return nil
 }
@@ -196,12 +193,13 @@ func readElement(data string) (typ byte, content string, n int) {
 		return
 	}
 	n, err := strconv.Atoi(data[:col])
-	if err != nil || n > len(data[col+1:]) {
+	// use the position after the colon from here on out
+	col++
+	if err != nil || col + n > len(data) {
 		return
 	}
-	// +1 for colon
-	n += col + 1
-	content = data[col+1 : n]
+	n += col
+	content = data[col : n]
 	typ = data[n]
 	n++
 	return

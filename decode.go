@@ -189,7 +189,7 @@ func unmarshalStruct(data string, v reflect.Value) os.Error {
 		if field.Internal == nil {
 			for i := 0; i < structType.NumField(); i++ {
 				f := structType.Field(i)
-				if f.Tag == name {
+				if f.Tag.Get("tnetstring") == name {
 					field = v.Field(i)
 					break
 				}

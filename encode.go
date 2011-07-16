@@ -104,7 +104,7 @@ func encodeStruct(b *outbuf, v reflect.Value) {
 	l := t.NumField()
 	for i := l - 1; i >= 0; i-- {
 		field := t.Field(i)
-		str := field.Tag
+		str := field.Tag.Get("tnetstring")
 		if str == "" {
 			str = field.Name
 		}

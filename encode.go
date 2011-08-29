@@ -13,10 +13,10 @@ func Marshal(v interface{}) (s string, err os.Error) {
 		}
 	}()
 	val := reflect.ValueOf(v)
-	b := new(outbuf)
+	var b outbuf
 	b.n = 20
 	b.buf = make([]byte, b.n)
-	lookupEncode(val.Kind())(b, val)
+	lookupEncode(val.Kind())(&b, val)
 	return string(b.buf[b.n:]), nil
 }
 
@@ -86,10 +86,11 @@ func encodeArray(b *outbuf, v reflect.Value) {
 func encodeMap(b *outbuf, v reflect.Value) {
 	b.writeByte('}')
 	orig := len(b.buf) - b.n
-	if v.Type().Key().Kind() != reflect.String {
+	mapType := v.Type()
+	if mapType.Key().Kind() != reflect.String {
 		panic("tnetstring: only maps with string keys can be encoded")
 	}
-	encodeFunc := lookupEncode(v.Type().Elem().Kind())
+	encodeFunc := lookupEncode(mapType.Elem().Kind())
 	for _, key := range v.MapKeys() {
 		encodeFunc(b, v.MapIndex(key))
 		b.writeTString(',', key.String())
@@ -116,12 +117,11 @@ func encodeStruct(b *outbuf, v reflect.Value) {
 
 func encodeIndirect(b *outbuf, v reflect.Value) {
 	for {
-		switch v.Kind() {
+		switch kind := v.Kind(); kind {
 		case reflect.Ptr, reflect.Interface:
 			v = v.Elem()
 		default:
-			encodeFunc := encodeTable[v.Kind()]
-			encodeFunc(b, v)
+			lookupEncode(kind)(b, v)
 			return
 		}
 	}

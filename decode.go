@@ -99,7 +99,7 @@ func unmarshal(data string, v reflect.Value) (int, os.Error) {
 	case ',':
 		v.Set(reflect.ValueOf(content))
 	case ']':
-		unmarshalArray(content, v)
+		unmarshalArray(content, v, kind)
 	case '}':
 		var err os.Error
 		if kind == reflect.Map {
@@ -123,8 +123,7 @@ func unmarshal(data string, v reflect.Value) (int, os.Error) {
 	return n, nil
 }
 
-func unmarshalArray(data string, v reflect.Value) os.Error {
-	kind := v.Kind()
+func unmarshalArray(data string, v reflect.Value, kind reflect.Kind) os.Error {
 	i := 0
 	elType := v.Type().Elem()
 	elVal := reflect.Zero(elType)
@@ -148,13 +147,14 @@ func unmarshalArray(data string, v reflect.Value) os.Error {
 }
 
 func unmarshalMap(data string, v reflect.Value) os.Error {
-	if v.Type().Key().Kind() != reflect.String {
+	mapType := v.Type()
+	if mapType.Key().Kind() != reflect.String {
 		return os.NewError("tnetstring: only maps with string keys can be unmarshaled")
 	}
 	if v.IsNil() {
-		v.Set(reflect.MakeMap(v.Type()))
+		v.Set(reflect.MakeMap(mapType))
 	}
-	vtype := v.Type().Elem()
+	vtype := mapType.Elem()
 	var s string
 	key := reflect.ValueOf(&s).Elem()
 	val := reflect.New(vtype).Elem()

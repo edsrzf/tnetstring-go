@@ -1,15 +1,15 @@
 package tnetstring
 
 import (
-	"os"
+	"errors"
 	"reflect"
 	"strconv"
 )
 
-func Marshal(v interface{}) (s string, err os.Error) {
+func Marshal(v interface{}) (s string, err error) {
 	defer func() {
 		if s, ok := recover().(string); ok {
-			err = os.NewError(s)
+			err = errors.New(s)
 		}
 	}()
 	val := reflect.ValueOf(v)
@@ -62,11 +62,11 @@ func encodeBool(b *outbuf, v reflect.Value) {
 }
 
 func encodeInt(b *outbuf, v reflect.Value) {
-	b.writeTString('#', strconv.Itoa64(v.Int()))
+	b.writeTString('#', strconv.FormatInt(v.Int(), 10))
 }
 
 func encodeUint(b *outbuf, v reflect.Value) {
-	b.writeTString('#', strconv.Uitoa64(v.Uint()))
+	b.writeTString('#', strconv.FormatUint(v.Uint(), 10))
 }
 
 func encodeString(b *outbuf, v reflect.Value) {

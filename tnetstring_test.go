@@ -1,8 +1,7 @@
 package tnetstring
 
 import (
-	"json"
-	"os"
+	"encoding/json"
 	"reflect"
 	"testing"
 )
@@ -40,11 +39,11 @@ var tnetstringTests = []tnetstringTest{
 	{struct {
 		A int
 		B string
-	}{1, "hello"},"20:1:A,1:1#1:B,5:hello,}"},
+	}{1, "hello"}, "20:1:A,1:1#1:B,5:hello,}"},
 	{&struct {
 		A int
 		B string
-	}{1, "hello"},"20:1:A,1:1#1:B,5:hello,}"},
+	}{1, "hello"}, "20:1:A,1:1#1:B,5:hello,}"},
 }
 
 var tests = append(stableTests, tnetstringTests...)
@@ -86,9 +85,9 @@ func init() {
 	jsonData = make([][]byte, len(stableTests))
 	benchmarkData = make([]string, len(stableTests))
 	for i, test := range stableTests {
-		var err os.Error
+		var err error
 		if jsonData[i], err = json.Marshal(test.val); err != nil {
-			panic(err.String())
+			panic(err.Error())
 		}
 		benchmarkData[i] = test.data
 	}

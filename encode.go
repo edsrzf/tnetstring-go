@@ -74,18 +74,16 @@ func encodeString(b *outbuf, v reflect.Value) {
 }
 
 func encodeArray(b *outbuf, v reflect.Value) {
-	b.writeByte(']')
-	orig := len(b.buf) - b.n
+	mark := b.mark(']')
 	encodeFunc := lookupEncode(v.Type().Elem().Kind())
 	for i := v.Len() - 1; i >= 0; i-- {
 		encodeFunc(b, v.Index(i))
 	}
-	b.writeLen(orig)
+	b.writeLen(mark)
 }
 
 func encodeMap(b *outbuf, v reflect.Value) {
-	b.writeByte('}')
-	orig := len(b.buf) - b.n
+	mark := b.mark('}')
 	mapType := v.Type()
 	if mapType.Key().Kind() != reflect.String {
 		panic("tnetstring: only maps with string keys can be encoded")
@@ -95,12 +93,11 @@ func encodeMap(b *outbuf, v reflect.Value) {
 		encodeFunc(b, v.MapIndex(key))
 		b.writeTString(',', key.String())
 	}
-	b.writeLen(orig)
+	b.writeLen(mark)
 }
 
 func encodeStruct(b *outbuf, v reflect.Value) {
-	b.writeByte('}')
-	orig := len(b.buf) - b.n
+	mark := b.mark('}')
 	t := v.Type()
 	l := t.NumField()
 	for i := l - 1; i >= 0; i-- {
@@ -112,7 +109,7 @@ func encodeStruct(b *outbuf, v reflect.Value) {
 		lookupEncode(field.Type.Kind())(b, v.Field(i))
 		b.writeTString(',', str)
 	}
-	b.writeLen(orig)
+	b.writeLen(mark)
 }
 
 func encodeIndirect(b *outbuf, v reflect.Value) {
@@ -149,6 +146,11 @@ func (buf *outbuf) writeByte(b byte) {
 	buf.buf[buf.n] = b
 }
 
+func (b *outbuf) mark(typ byte) int {
+	b.writeByte(typ)
+	return len(b.buf) - b.n
+}
+
 func (b *outbuf) writeTString(typ byte, s string) {
 	l := len(s)
 	lstr := strconv.Itoa(l)
@@ -166,8 +168,8 @@ func (b *outbuf) writeTString(typ byte, s string) {
 	copy(b.buf[b.n:], lstr)
 }
 
-func (b *outbuf) writeLen(orig int) {
-	l := len(b.buf) - b.n - orig
+func (b *outbuf) writeLen(mark int) {
+	l := len(b.buf) - b.n - mark
 	str := strconv.Itoa(l)
 	b.writeByte(':')
 	if b.n < len(str) {

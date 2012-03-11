@@ -50,7 +50,11 @@ func init() {
 }
 
 func encodeNull(b *outbuf, v reflect.Value) {
-	b.writeTString('~', "")
+	if b.n < 3 {
+		b.grow(3)
+	}
+	b.n -= 3
+	copy(b.buf[b.n:], "0:~")
 }
 
 func encodeBool(b *outbuf, v reflect.Value) {

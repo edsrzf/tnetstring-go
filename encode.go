@@ -38,6 +38,8 @@ func init() {
 		reflect.Uint32:    encodeUint,
 		reflect.Uint64:    encodeUint,
 		reflect.Uintptr:   encodeUint,
+		reflect.Float32:   encodeFloat,
+		reflect.Float64:   encodeFloat,
 		reflect.String:    encodeString,
 		reflect.Array:     encodeArray,
 		reflect.Slice:     encodeArray,
@@ -113,6 +115,24 @@ func encodeUint(b *outbuf, v reflect.Value) {
 	b.buf[b.n] = ':'
 	b.n -= llen
 	strconv.AppendUint(b.buf[:b.n], uint64(l), 10)
+}
+
+func encodeFloat(b *outbuf, v reflect.Value) {
+	valstr := strconv.FormatFloat(v.Float(), 'f', -1, 64)
+	vallen := len(valstr)
+	llen := digitCount(uint64(vallen))
+	n := llen + 1 + vallen + 1
+	if b.n < n {
+		b.grow(n)
+	}
+	b.n--
+	b.buf[b.n] = '^'
+	b.n -= vallen
+	copy(b.buf[b.n:], valstr)
+	b.n--
+	b.buf[b.n] = ':'
+	b.n -= llen
+	strconv.AppendUint(b.buf[:b.n], uint64(vallen), 10)
 }
 
 func encodeString(b *outbuf, v reflect.Value) {

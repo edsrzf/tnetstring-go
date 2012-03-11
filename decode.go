@@ -51,6 +51,8 @@ var typeLookup = [...]byte{
 	reflect.Uint32:  '#',
 	reflect.Uint64:  '#',
 	reflect.Uintptr: '#',
+	reflect.Float32: '^',
+	reflect.Float64: '^',
 	reflect.String:  ',',
 	reflect.Array:   ']',
 	reflect.Slice:   ']',
@@ -97,6 +99,12 @@ func unmarshal(data string, v reflect.Value) (int, error) {
 			}
 			v.Set(reflect.ValueOf(i))
 		}
+	case '^':
+		f, err := strconv.ParseFloat(content, 64)
+		if err != nil {
+			return 0, err
+		}
+		v.Set(reflect.ValueOf(f))
 	case ',':
 		v.Set(reflect.ValueOf(content))
 	case ']':

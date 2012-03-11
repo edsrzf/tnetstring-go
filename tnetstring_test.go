@@ -15,7 +15,7 @@ type tnetstringTest struct {
 // implementation's benchmark cases.
 var stableTests = []tnetstringTest{
 	{map[string]string{}, "0:}"},
-	{[]bool{}, "0:]"},
+	{[]bool(nil), "0:]"},
 	{"", "0:,"},
 	{map[string][]interface{}{"hello": []interface{}{int64(12345678901), "this", true, nil, "\x00\x00\x00\x00"}}, "51:5:hello,39:11:12345678901#4:this,4:true!0:~4:\x00\x00\x00\x00,]}"},
 	{12345, "5:12345#"},

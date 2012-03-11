@@ -116,7 +116,7 @@ func encodeUint(b *outbuf, v reflect.Value) {
 }
 
 func encodeString(b *outbuf, v reflect.Value) {
-	b.writeTString(',', v.String())
+	b.writeString(v.String())
 }
 
 func encodeArray(b *outbuf, v reflect.Value) {
@@ -137,7 +137,7 @@ func encodeMap(b *outbuf, v reflect.Value) {
 	encodeFunc := lookupEncode(mapType.Elem().Kind())
 	for _, key := range v.MapKeys() {
 		encodeFunc(b, v.MapIndex(key))
-		b.writeTString(',', key.String())
+		b.writeString(key.String())
 	}
 	b.writeLen(mark)
 }
@@ -153,7 +153,7 @@ func encodeStruct(b *outbuf, v reflect.Value) {
 			str = field.Name
 		}
 		lookupEncode(field.Type.Kind())(b, v.Field(i))
-		b.writeTString(',', str)
+		b.writeString(str)
 	}
 	b.writeLen(mark)
 }
@@ -206,7 +206,7 @@ func (b *outbuf) mark(typ byte) int {
 	return len(b.buf) - b.n
 }
 
-func (b *outbuf) writeTString(typ byte, s string) {
+func (b *outbuf) writeString(s string) {
 	l := len(s)
 	llen := digitCount(uint64(l))
 	n := llen + 1 + l + 1
@@ -214,7 +214,7 @@ func (b *outbuf) writeTString(typ byte, s string) {
 		b.grow(n)
 	}
 	b.n--
-	b.buf[b.n] = typ
+	b.buf[b.n] = ','
 	b.n -= l
 	copy(b.buf[b.n:], s)
 	b.n--

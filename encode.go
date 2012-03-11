@@ -2,6 +2,7 @@ package tnetstring
 
 import (
 	"errors"
+	"math"
 	"reflect"
 	"strconv"
 )
@@ -62,11 +63,56 @@ func encodeBool(b *outbuf, v reflect.Value) {
 }
 
 func encodeInt(b *outbuf, v reflect.Value) {
-	b.writeTString('#', strconv.FormatInt(v.Int(), 10))
+	val := v.Int()
+	var vallen int
+	llen := 1
+	switch {
+	case val < -999999999:
+		llen = 3
+		fallthrough
+	case val < 0:
+		vallen = digitCount(uint64(-val)) + 1
+	case val > 999999999:
+		llen = 2
+		fallthrough
+	default:
+		vallen = digitCount(uint64(val))
+	}
+	n := llen + 1 + vallen + 1
+	if b.n < n {
+		b.grow(n)
+	}
+	b.n--
+	b.buf[b.n] = '#'
+	b.n -= vallen
+	valstr := strconv.AppendInt(b.buf[b.n:b.n], val, 10)
+	l := len(valstr)
+	b.n--
+	b.buf[b.n] = ':'
+	b.n -= llen
+	strconv.AppendUint(b.buf[:b.n], uint64(l), 10)
 }
 
 func encodeUint(b *outbuf, v reflect.Value) {
-	b.writeTString('#', strconv.FormatUint(v.Uint(), 10))
+	val := v.Uint()
+	vallen := digitCount(val)
+	llen := 1
+	if val > 999999999 {
+		llen = 2
+	}
+	n := llen + 1 + vallen + 1
+	if b.n < n {
+		b.grow(n)
+	}
+	b.n--
+	b.buf[b.n] = '#'
+	b.n -= vallen
+	valstr := strconv.AppendUint(b.buf[b.n:b.n], val, 10)
+	l := len(valstr)
+	b.n--
+	b.buf[b.n] = ':'
+	b.n -= llen
+	strconv.AppendUint(b.buf[:b.n], uint64(l), 10)
 }
 
 func encodeString(b *outbuf, v reflect.Value) {
@@ -162,8 +208,8 @@ func (b *outbuf) mark(typ byte) int {
 
 func (b *outbuf) writeTString(typ byte, s string) {
 	l := len(s)
-	lstr := strconv.Itoa(l)
-	n := len(lstr) + 1 + l + 1
+	llen := digitCount(uint64(l))
+	n := llen + 1 + l + 1
 	if b.n < n {
 		b.grow(n)
 	}
@@ -173,19 +219,19 @@ func (b *outbuf) writeTString(typ byte, s string) {
 	copy(b.buf[b.n:], s)
 	b.n--
 	b.buf[b.n] = ':'
-	b.n -= len(lstr)
-	copy(b.buf[b.n:], lstr)
+	b.n -= llen
+	strconv.AppendInt(b.buf[:b.n], int64(l), 10)
 }
 
 func (b *outbuf) writeLen(mark int) {
-	l := len(b.buf) - b.n - mark
-	str := strconv.Itoa(l)
+	l := uint64(len(b.buf) - b.n - mark)
 	b.writeByte(':')
-	if b.n < len(str) {
-		b.grow(len(str))
+	llen := digitCount(l)
+	if b.n < llen {
+		b.grow(llen)
 	}
-	b.n -= len(str)
-	copy(b.buf[b.n:], str)
+	b.n -= llen
+	strconv.AppendUint(b.buf[:b.n], l, 10)
 }
 
 func (b *outbuf) grow(n int) {
@@ -198,4 +244,11 @@ func (b *outbuf) grow(n int) {
 	copy(buf[need-l+b.n:], b.buf[b.n:])
 	b.buf = buf
 	b.n = need - l + b.n
+}
+
+func digitCount(n uint64) int {
+	if n == 0 {
+		return 1
+	}
+	return int(math.Log10(float64(n)))+1
 }

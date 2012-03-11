@@ -50,27 +50,15 @@ func init() {
 }
 
 func encodeNull(b *outbuf, v reflect.Value) {
-	if b.n < 3 {
-		b.grow(3)
-	}
-	b.n -= 3
-	copy(b.buf[b.n:], "0:~")
+	b.writeRawString("0:~")
 }
 
 func encodeBool(b *outbuf, v reflect.Value) {
 	if v.Bool() {
-		if b.n < 7 {
-			b.grow(7)
-		}
-		b.n -= 7
-		copy(b.buf[b.n:], "4:true!")
+		b.writeRawString("4:true!")
 		return
 	}
-	if b.n < 8 {
-		b.grow(8)
-	}
-	b.n -= 8
-	copy(b.buf[b.n:], "5:false!")
+	b.writeRawString("5:false!")
 }
 
 func encodeInt(b *outbuf, v reflect.Value) {
@@ -148,6 +136,15 @@ type outbuf struct {
 	// n is the index we last wrote to or the amount of space left,
 	// depending on how you look at it
 	n int
+}
+
+func (b *outbuf) writeRawString(s string) {
+	n := len(s)
+	if b.n < n {
+		b.grow(n)
+	}
+	b.n -= n
+	copy(b.buf[b.n:], s)
 }
 
 func (buf *outbuf) writeByte(b byte) {

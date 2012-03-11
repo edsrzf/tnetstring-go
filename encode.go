@@ -58,11 +58,19 @@ func encodeNull(b *outbuf, v reflect.Value) {
 }
 
 func encodeBool(b *outbuf, v reflect.Value) {
-	str := "false"
 	if v.Bool() {
-		str = "true"
+		if b.n < 7 {
+			b.grow(7)
+		}
+		b.n -= 7
+		copy(b.buf[b.n:], "4:true!")
+		return
 	}
-	b.writeTString('!', str)
+	if b.n < 8 {
+		b.grow(8)
+	}
+	b.n -= 8
+	copy(b.buf[b.n:], "5:false!")
 }
 
 func encodeInt(b *outbuf, v reflect.Value) {

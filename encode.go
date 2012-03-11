@@ -193,16 +193,12 @@ func (b *outbuf) writeRawString(s string) {
 	copy(b.buf[b.n:], s)
 }
 
-func (buf *outbuf) writeByte(b byte) {
-	if buf.n <= 0 {
-		buf.grow(1)
-	}
-	buf.n--
-	buf.buf[buf.n] = b
-}
-
 func (b *outbuf) mark(typ byte) int {
-	b.writeByte(typ)
+	if b.n <= 0 {
+		b.grow(1)
+	}
+	b.n--
+	b.buf[b.n] = typ
 	return len(b.buf) - b.n
 }
 
@@ -225,11 +221,12 @@ func (b *outbuf) writeString(s string) {
 
 func (b *outbuf) writeLen(mark int) {
 	l := uint64(len(b.buf) - b.n - mark)
-	b.writeByte(':')
 	llen := digitCount(l)
-	if b.n < llen {
-		b.grow(llen)
+	if b.n < llen+1 {
+		b.grow(llen+1)
 	}
+	b.n--
+	b.buf[b.n] = ':'
 	b.n -= llen
 	strconv.AppendUint(b.buf[:b.n], l, 10)
 }

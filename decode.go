@@ -17,16 +17,16 @@ func Unmarshal(data string, v interface{}) error {
 	return err
 }
 
-func indirect(v reflect.Value, create bool) reflect.Value {
+func indirect(v reflect.Value) reflect.Value {
 	for {
 		switch v.Kind() {
 		case reflect.Ptr:
-			if create && v.IsNil() {
+			if v.IsNil() {
 				v.Set(reflect.New(v.Type().Elem()))
 			}
 			v = v.Elem()
 		case reflect.Interface:
-			if create && v.IsNil() {
+			if v.IsNil() {
 				return v
 			}
 			v = v.Elem()
@@ -67,7 +67,7 @@ func unmarshal(data string, v reflect.Value) (int, error) {
 	if n == 0 {
 		return 0, errors.New("tnetstring: invalid data")
 	}
-	v = indirect(v, true)
+	v = indirect(v)
 	kind := v.Kind()
 	// ~ and interface types are special cases
 	if typ != '~' && kind != reflect.Interface && typeLookup[kind] != typ {
@@ -254,7 +254,7 @@ func unmarshalStruct(data string, v reflect.Value) error {
 }
 
 func readElement(data string) (typ byte, content string, n int) {
-	col := strings.Index(data, ":")
+	col := strings.IndexRune(data, ':')
 	if col < 1 {
 		return
 	}

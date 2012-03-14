@@ -134,15 +134,24 @@ func unmarshal(data string, v reflect.Value) (int, error) {
 
 func unmarshalArray(data string, v reflect.Value, kind reflect.Kind) error {
 	i := 0
-	elType := v.Type().Elem()
-	elVal := reflect.Zero(elType)
+	vtype := v.Type()
+	l := v.Cap()
+	if v.Len() < l {
+		v.SetLen(l)
+	}
 	for len(data) > 0 {
-		if i >= v.Len() {
+		if i >= l {
 			if kind == reflect.Array {
 				break
-			} else {
-				v.Set(reflect.Append(v, elVal))
 			}
+			newl := l + l/2
+			if newl < 4 {
+				newl = 4
+			}
+			newv := reflect.MakeSlice(vtype, newl, newl)
+			reflect.Copy(newv, v)
+			v.Set(newv)
+			l = newl
 		}
 		el := v.Index(i)
 		i++
@@ -150,6 +159,17 @@ func unmarshalArray(data string, v reflect.Value, kind reflect.Kind) error {
 		data = data[n:]
 		if err != nil {
 			return err
+		}
+	}
+	if i < l {
+		if kind == reflect.Array {
+			// zero out the rest
+			z := reflect.Zero(vtype.Elem())
+			for ; i < l; i++ {
+				v.Index(i).Set(z)
+			}
+		} else {
+			v.SetLen(i)
 		}
 	}
 	return nil

@@ -75,7 +75,12 @@ func unmarshal(data string, v reflect.Value) (int, error) {
 	}
 	switch typ {
 	case '!':
-		v.Set(reflect.ValueOf(content == "true"))
+		b := content == "true"
+		if kind == reflect.Bool {
+			v.SetBool(b)
+		} else {
+			v.Set(reflect.ValueOf(b))
+		}
 	case '#':
 		switch kind {
 		case reflect.Int, reflect.Int8, reflect.Int16,
@@ -104,9 +109,18 @@ func unmarshal(data string, v reflect.Value) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		v.Set(reflect.ValueOf(f))
+		switch kind {
+		case reflect.Float32, reflect.Float64:
+			v.SetFloat(f)
+		case reflect.Interface:
+			v.Set(reflect.ValueOf(f))
+		}
 	case ',':
-		v.Set(reflect.ValueOf(content))
+		if kind == reflect.String {
+			v.SetString(content)
+		} else {
+			v.Set(reflect.ValueOf(content))
+		}
 	case ']':
 		unmarshalArray(content, v, kind)
 	case '}':

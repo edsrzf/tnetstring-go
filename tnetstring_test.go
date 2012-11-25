@@ -76,9 +76,12 @@ func TestUnmarshal(t *testing.T) {
 			continue
 		}
 		val := reflect.New(ty)
-		err := Unmarshal(test.data, val.Interface())
+		rest, err := Unmarshal(test.data, val.Interface())
 		if err != nil {
 			t.Errorf("#%d Unmarshal error: %s", i, err)
+		}
+		if rest != "" {
+			t.Errorf("#%d Unmarshal returned non-empty left-over: %v", i, rest)
 		}
 		if !reflect.DeepEqual(test.val, val.Elem().Interface()) {
 			t.Errorf("#%d want\n%v\ngot\n%v", i, test.val, val.Elem().Interface())

@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-func Unmarshal(data string, v interface{}) error {
+func Unmarshal(data string, v interface{}) (string, error) {
 	val := reflect.ValueOf(v)
 	val = reflect.Indirect(val)
 	if !val.CanSet() {
-		return errors.New("tnetstring: Unmarshal requires a settable value")
+		return data, errors.New("tnetstring: Unmarshal requires a settable value")
 	}
-	_, err := unmarshal(data, val)
-	return err
+	n, err := unmarshal(data, val)
+	return data[n:], err
 }
 
 func indirect(v reflect.Value) reflect.Value {

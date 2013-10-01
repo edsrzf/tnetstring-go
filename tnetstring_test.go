@@ -69,7 +69,27 @@ func TestMarshal(t *testing.T) {
 	}
 }
 
+type mapStruct struct {
+	A map[string]string
+	B string
+}
+
+var mapTests = []tnetstringTest{
+	{map[string]int{"a": 1, "b": 2}, "16:1:a,1:1#1:b,1:2#}"},
+	{map[string]mapStruct{
+		"k1": mapStruct{A: map[string]string{"a": "b", "c": "d"}, B: "str1"},
+		"k2": mapStruct{A: map[string]string{"e": "f", "g": "h"}, B: "str2"},
+	}, "88:2:k1,35:1:A,16:1:a,1:b,1:c,1:d,}1:B,4:str1,}2:k2,35:1:A,16:1:e,1:f,1:g,1:h,}1:B,4:str2,}}"},
+	{map[string]map[string]map[string]string{
+		"k1": map[string]map[string]string{"k3": map[string]string{"a": "b", "c": "d"}, "k4": map[string]string{"i": "j"}},
+		"k2": map[string]map[string]string{"k5": map[string]string{"e": "f", "g": "h"}, "k6": map[string]string{"k": "l"}},
+	}, "100:2:k1,41:2:k3,16:1:a,1:b,1:c,1:d,}2:k4,8:1:i,1:j,}}2:k2,41:2:k5,16:1:e,1:f,1:g,1:h,}2:k6,8:1:k,1:l,}}}"},
+}
+
 func TestUnmarshal(t *testing.T) {
+
+	tests = append(tests, mapTests...)
+
 	for i, test := range tests {
 		ty := reflect.TypeOf(test.val)
 		if ty == nil {

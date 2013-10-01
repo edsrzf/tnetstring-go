@@ -200,8 +200,8 @@ func unmarshalMap(data string, v reflect.Value) error {
 	vtype := mapType.Elem()
 	var s string
 	key := reflect.ValueOf(&s).Elem()
-	val := reflect.New(vtype).Elem()
 	for len(data) > 0 {
+		val := reflect.New(vtype).Elem()
 		typ, content, n := readElement(data)
 		data = data[n:]
 		if typ != ',' {

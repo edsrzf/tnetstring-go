@@ -52,6 +52,7 @@ var tnetstringTests = []tnetstringTest{
 		A int
 		B string
 	}{1, "hello"}, "20:1:A,1:1#1:B,5:hello,}"},
+	{map[string]interface{}{"a": [][2]string{[2]string{"b", "c"}}, "d": "e"}, "27:1:d,1:e,1:a,11:8:1:b,1:c,]]}"},
 }
 
 var tests = append(stableTests, tnetstringTests...)

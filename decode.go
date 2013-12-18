@@ -21,16 +21,19 @@ func indirect(v reflect.Value) reflect.Value {
 	for {
 		switch v.Kind() {
 		case reflect.Ptr:
+			print("Ptr")
 			if v.IsNil() {
 				v.Set(reflect.New(v.Type().Elem()))
 			}
 			v = v.Elem()
 		case reflect.Interface:
+			print("Interface")
 			if v.IsNil() {
 				return v
 			}
 			v = v.Elem()
 		default:
+			print("Default")
 			return v
 		}
 	}
